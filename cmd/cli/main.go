@@ -3,13 +3,19 @@ package main
 import (
 	"fmt"
 	"log-handler/internal/logentry"
+	"path"
 )
 
 func main() {
-	log, err := logentry.ParseLogLine("2023-12-25T14:30:15.123Z [INFO] user-service: User authenticated, request_id=req_abc123, user_id=12345")
+	filepath := "./examples/test.log"
+	res, err := logentry.ReadLogFile(filepath)
 	if err != nil {
-		return
+		fmt.Println("ERROR")
+		fmt.Println(err)
+		fmt.Println("===ERROR===")
 	}
 
-	fmt.Println(log)
+	fmt.Println("Processing file:", path.Base(filepath))
+	fmt.Println("Total lines:", len(res))
+
 }

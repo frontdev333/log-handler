@@ -1,7 +1,10 @@
 package logentry
 
 import (
+	"bufio"
 	"fmt"
+	"log/slog"
+	"os"
 	"regexp"
 	"time"
 )
@@ -34,18 +37,18 @@ func ParseLogLine(line string) (LogEntry, error) {
 
 	reqId := requestRegex.FindStringSubmatch(res[4])
 	if len(reqId) != 2 {
-		return LogEntry{}, fmt.Errorf("parse request_id error")
+		return LogEntry{}, fmt.Errorf("request_id not found in log line")
 	}
 
 	usrId := userRegex.FindStringSubmatch(res[4])
 	if len(usrId) != 2 {
-		return LogEntry{}, fmt.Errorf("parse user_id error")
+		return LogEntry{}, fmt.Errorf("user_id not found in log line")
 	}
 
 	msg := msgRegex.FindStringSubmatch(res[4])
 
 	if len(msg) != 2 {
-		return LogEntry{}, fmt.Errorf("parse message error")
+		return LogEntry{}, fmt.Errorf("message format invalid in log line")
 	}
 
 	return LogEntry{
@@ -56,4 +59,31 @@ func ParseLogLine(line string) (LogEntry, error) {
 		Level:     res[2],
 		Timestamp: logTime,
 	}, nil
+}
+
+func ReadLogFile(filepath string) ([]LogEntry, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		slog.Error("open file error", "error", err.Error())
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	result := make([]LogEntry, 0, 100)
+	for scanner.Scan() {
+		logLine, err := ParseLogLine(scanner.Text())
+		if err != nil {
+			slog.Error("read log line error", "error", err.Error())
+			continue
+		}
+		result = append(result, logLine)
+	}
+
+	if scanner.Err() != nil {
+		slog.Error("scanner error")
+		return nil, err
+	}
+
+	return result, nil
 }
