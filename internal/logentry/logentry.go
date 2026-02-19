@@ -8,11 +8,16 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
 
-const defaultLogCapacity = 100
+const (
+	defaultLogCapacity = 100
+	errLevel           = "ERROR"
+	warnLevel          = "WARN"
+)
 
 type LogEntry struct {
 	UserID    string
@@ -137,17 +142,55 @@ func ProcessMultipleFiles(filePaths []string) ([]LogEntry, error) {
 }
 
 func CorrelateRequests(entries []LogEntry) map[string][]LogEntry {
-	const ORPHANS_KEY = "orphans"
+	const orphansKey = "orphans"
 
 	res := make(map[string][]LogEntry)
 
 	for _, log := range entries {
 		if log.RequestID == "" {
-			res[ORPHANS_KEY] = append(res[ORPHANS_KEY], log)
+			res[orphansKey] = append(res[orphansKey], log)
 			continue
 		}
 
 		res[log.RequestID] = append(res[log.RequestID], log)
 	}
 	return res
+}
+
+func DetectFailedRequests(correlatedRequests map[string][]LogEntry) []string {
+	res := make([]string, 0)
+	for reqId, v := range correlatedRequests {
+		for _, log := range v {
+			level := log.Level
+			if strings.Contains(level, errLevel) || strings.Contains(level, warnLevel) {
+				res = append(res, reqId)
+				break
+			}
+		}
+	}
+	return res
+}
+
+func FindFirstFailure(requestEntries []LogEntry) (LogEntry, bool) {
+
+	res := make([]LogEntry, 0)
+
+	for _, v := range requestEntries {
+		level := v.Level
+		if strings.Contains(level, errLevel) || strings.Contains(level, warnLevel) {
+			res = append(res, v)
+		}
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		fstVal := res[i].Timestamp
+		scndVal := res[j].Timestamp
+		return fstVal.Before(scndVal)
+	})
+
+	if len(res) > 0 {
+		return res[0], true
+	}
+
+	return LogEntry{}, false
 }

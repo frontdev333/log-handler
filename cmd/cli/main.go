@@ -20,9 +20,8 @@ func main() {
 	fmt.Println("Processing files...")
 	logs, err := logentry.ProcessMultipleFiles(paths)
 	if err != nil {
-		slog.Error("failed to process file", "error", err)
+		slog.Error("failed to process files", "error", err)
 	}
 
-	res := logentry.CorrelateRequests(logs)
-	fmt.Printf("%#v", res["req_abc123"])
+	fmt.Println(logentry.FindFirstFailure(logs))
 }
