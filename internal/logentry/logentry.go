@@ -3,11 +3,16 @@ package logentry
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 )
+
+const defaultLogCapacity = 100
 
 type LogEntry struct {
 	UserID    string
@@ -70,7 +75,7 @@ func ReadLogFile(filepath string) ([]LogEntry, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	result := make([]LogEntry, 0, 100)
+	result := make([]LogEntry, 0, defaultLogCapacity)
 	for scanner.Scan() {
 		logLine, err := ParseLogLine(scanner.Text())
 		if err != nil {
@@ -86,4 +91,45 @@ func ReadLogFile(filepath string) ([]LogEntry, error) {
 	}
 
 	return result, nil
+}
+
+func ScanLogDirectory(dirPath string) ([]string, error) {
+	res := make([]string, 0, 10)
+	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if strings.HasSuffix(info.Name(), ".log") {
+			res = append(res, path)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func ProcessMultipleFiles(filePaths []string) ([]LogEntry, error) {
+	capacity := len(filePaths) * defaultLogCapacity
+
+	res := make([]LogEntry, 0, capacity)
+
+	for _, pth := range filePaths {
+		logs, err := ReadLogFile(pth)
+		if err != nil {
+			slog.Error("failed to read log file", "error", err, "path", pth)
+			continue
+		}
+		res = append(res, logs...)
+	}
+	return res, nil
 }

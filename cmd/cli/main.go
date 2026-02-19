@@ -3,19 +3,21 @@ package main
 import (
 	"fmt"
 	"log-handler/internal/logentry"
-	"path"
+	"log/slog"
 )
 
 func main() {
-	filepath := "./examples/test.log"
-	res, err := logentry.ReadLogFile(filepath)
+	basePath := "./"
+	fmt.Println("Scanning directory:", basePath)
+	paths, err := logentry.ScanLogDirectory(basePath)
 	if err != nil {
-		fmt.Println("ERROR")
-		fmt.Println(err)
-		fmt.Println("===ERROR===")
+		slog.Error("failed to scan directory", "error", err)
 	}
+	fmt.Println("Found", len(paths), "log files:")
+	for _, v := range paths {
+		fmt.Println("-", v)
+	}
+	fmt.Println("Processing files...")
 
-	fmt.Println("Processing file:", path.Base(filepath))
-	fmt.Println("Total lines:", len(res))
-
+	fmt.Println()
 }
