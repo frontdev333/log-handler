@@ -42,12 +42,14 @@ func ParseLogLine(line string) (LogEntry, error) {
 
 	reqId := requestRegex.FindStringSubmatch(res[4])
 	if len(reqId) != 2 {
-		return LogEntry{}, fmt.Errorf("request_id not found in log line")
+		slog.Error("request_id not found in log line", "line", line)
+		reqId = []string{"", ""}
 	}
 
 	usrId := userRegex.FindStringSubmatch(res[4])
 	if len(usrId) != 2 {
-		return LogEntry{}, fmt.Errorf("user_id not found in log line")
+		slog.Warn("user_id not found in log line", "request_id", reqId[1])
+		usrId = []string{"", ""}
 	}
 
 	msg := msgRegex.FindStringSubmatch(res[4])
@@ -132,4 +134,20 @@ func ProcessMultipleFiles(filePaths []string) ([]LogEntry, error) {
 		res = append(res, logs...)
 	}
 	return res, nil
+}
+
+func CorrelateRequests(entries []LogEntry) map[string][]LogEntry {
+	const ORPHANS_KEY = "orphans"
+
+	res := make(map[string][]LogEntry)
+
+	for _, log := range entries {
+		if log.RequestID == "" {
+			res[ORPHANS_KEY] = append(res[ORPHANS_KEY], log)
+			continue
+		}
+
+		res[log.RequestID] = append(res[log.RequestID], log)
+	}
+	return res
 }
