@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log-handler/internal/commandLine"
 	"log-handler/internal/jsonHandler"
 	"log-handler/internal/logentry"
 	"log/slog"
@@ -10,7 +11,12 @@ import (
 
 func main() {
 	startTime := time.Now()
-	paths, err := logentry.ScanLogDirectory("./")
+	dir, file, err := commandLine.ParseCommandLineArgs()
+	if err != nil {
+		slog.Error("parse commands error", "error", err)
+		return
+	}
+	paths, err := logentry.ScanLogDirectory(dir)
 	if err != nil {
 		slog.Error("failed to scan directory", "error", err)
 	}
@@ -59,7 +65,7 @@ func main() {
 		FailedRequests:        failedReqsReports,
 	}
 
-	if err = jsonHandler.WriteJSONReport(res, "./result.txt"); err != nil {
+	if err = jsonHandler.WriteJSONReport(res, file); err != nil {
 		slog.Error("write json to file error", "error", err)
 		return
 	}
