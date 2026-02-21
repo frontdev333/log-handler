@@ -17,6 +17,7 @@ const (
 	defaultLogCapacity = 100
 	errLevel           = "ERROR"
 	warnLevel          = "WARN"
+	OrphansKey         = "orphans"
 )
 
 type LogEntry struct {
@@ -142,13 +143,11 @@ func ProcessMultipleFiles(filePaths []string) ([]LogEntry, error) {
 }
 
 func CorrelateRequests(entries []LogEntry) map[string][]LogEntry {
-	const orphansKey = "orphans"
-
 	res := make(map[string][]LogEntry)
 
 	for _, log := range entries {
 		if log.RequestID == "" {
-			res[orphansKey] = append(res[orphansKey], log)
+			res[OrphansKey] = append(res[OrphansKey], log)
 			continue
 		}
 
@@ -157,6 +156,7 @@ func CorrelateRequests(entries []LogEntry) map[string][]LogEntry {
 	return res
 }
 
+// DetectFailedRequests returns a slice of requests ids
 func DetectFailedRequests(correlatedRequests map[string][]LogEntry) []string {
 	res := make([]string, 0)
 	for reqId, v := range correlatedRequests {
@@ -182,15 +182,24 @@ func FindFirstFailure(requestEntries []LogEntry) (LogEntry, bool) {
 		}
 	}
 
-	sort.Slice(res, func(i, j int) bool {
-		fstVal := res[i].Timestamp
-		scndVal := res[j].Timestamp
-		return fstVal.Before(scndVal)
-	})
+	res = SortTimelineByTimestamp(res)
 
 	if len(res) > 0 {
 		return res[0], true
 	}
 
 	return LogEntry{}, false
+}
+func SortTimelineByTimestamp(entries []LogEntry) []LogEntry {
+	tmpEntries := make([]LogEntry, len(entries))
+
+	copy(tmpEntries, entries)
+
+	sort.Slice(tmpEntries, func(i, j int) bool {
+		fstVal := tmpEntries[i].Timestamp
+		scndVal := tmpEntries[j].Timestamp
+		return fstVal.Before(scndVal)
+	})
+
+	return tmpEntries
 }
