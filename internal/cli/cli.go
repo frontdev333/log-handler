@@ -1,4 +1,4 @@
-package commandLine
+package cli
 
 import (
 	"errors"

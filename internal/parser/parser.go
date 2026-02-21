@@ -1,0 +1,62 @@
+package parser
+
+import (
+	"fmt"
+	"log/slog"
+	"regexp"
+	"time"
+)
+
+var mainRegex = regexp.MustCompile(`(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) \[(\w+)\] (\S+):\s(.+)`)
+var requestRegex = regexp.MustCompile(`request_id=([a-zA-Z0-9_]+)`)
+var userRegex = regexp.MustCompile(`user_id=([a-zA-Z0-9_]+)`)
+var msgRegex = regexp.MustCompile(`(.+?),`)
+
+type LogEntry struct {
+	UserID    string
+	RequestID string
+	Message   string
+	Service   string
+	Level     string
+	Timestamp time.Time
+}
+
+func ParseLogLine(line string) (LogEntry, error) {
+
+	res := mainRegex.FindStringSubmatch(line)
+	if res == nil || len(res) != 5 {
+		return LogEntry{}, fmt.Errorf("incorrect log line format")
+	}
+
+	logTime, err := time.Parse("2006-01-02T15:04:05.000Z07:00", res[1])
+	if err != nil {
+		return LogEntry{}, err
+	}
+
+	reqId := requestRegex.FindStringSubmatch(res[4])
+	if len(reqId) != 2 {
+		slog.Error("request_id not found in log line", "line", line)
+		reqId = []string{"", ""}
+	}
+
+	usrId := userRegex.FindStringSubmatch(res[4])
+	if len(usrId) != 2 {
+		slog.Warn("user_id not found in log line", "request_id", reqId[1])
+		usrId = []string{"", ""}
+	}
+
+	msg := msgRegex.FindStringSubmatch(res[4])
+
+	if len(msg) != 2 {
+		return LogEntry{}, fmt.Errorf("message format invalid in log line")
+	}
+
+	return LogEntry{
+		UserID:    usrId[1],
+		RequestID: reqId[1],
+		Message:   msg[1],
+		Service:   res[3],
+		Level:     res[2],
+		Timestamp: logTime,
+	}, nil
+}
