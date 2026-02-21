@@ -24,7 +24,7 @@ func main() {
 		slog.Error("failed to scan directory", "error", err)
 	}
 
-	logs, err := utils.ProcessMultipleFiles(paths)
+	logs, err := utils.ProcessFilesConcurrently(paths, 5)
 	if err != nil {
 		slog.Error("processing files error", "error", err)
 		return
