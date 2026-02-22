@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log-handler/internal/cli"
 	"log-handler/internal/processor"
@@ -8,6 +9,8 @@ import (
 	"log-handler/internal/scanner"
 	"log-handler/internal/utils"
 	"log/slog"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -24,8 +27,13 @@ func main() {
 		slog.Error("failed to scan directory", "error", err)
 	}
 
-	logs, err := utils.ProcessFilesConcurrently(paths, 5)
-	if err != nil {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	logs, err := utils.ProcessFilesConcurrently(ctx, paths, 5)
+	if err == context.Canceled {
+		slog.Warn("shutdown signal received, saving partial results...")
+	} else if err != nil {
 		slog.Error("processing files error", "error", err)
 		return
 	}
