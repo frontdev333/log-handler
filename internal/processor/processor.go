@@ -46,7 +46,7 @@ func FindFirstFailure(requestEntries []parser.LogEntry) (parser.LogEntry, bool) 
 
 	for _, v := range requestEntries {
 		level := v.Level
-		if strings.Contains(level, errLevel) || strings.Contains(level, warnLevel) {
+		if level == errLevel || level == warnLevel {
 			res = append(res, v)
 		}
 	}

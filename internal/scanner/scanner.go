@@ -25,7 +25,7 @@ func ReadLogFile(filePath string) ([]parser.LogEntry, error) {
 	for scanner.Scan() {
 		logLine, err := parser.ParseLogLine(scanner.Text())
 		if err != nil {
-			slog.Error("read log line error", "error", err.Error())
+			slog.Warn("read log line", "error", err.Error())
 			continue
 		}
 		result = append(result, logLine)
