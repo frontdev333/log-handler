@@ -282,6 +282,49 @@ log-handler/
 
 ---
 
-**Версия:** 1.0.0  
-**Обновлено:** Декабрь 2023
+## 📝 Формат сообщений логов
 
+Log Processor обрабатывает логи в следующем формате:
+
+### Стандартный формат лога
+
+```
+<TIMESTAMP> [<LEVEL>] <SERVICE_NAME>: <MESSAGE>, request_id=<REQUEST_ID>
+```
+
+### Описание компонентов
+
+| Компонент | Описание | Пример |
+|-----------|---------|--------|
+| `TIMESTAMP` | ISO 8601 формат с временной меткой | `2024-02-26T14:30:25.120Z` |
+| `LEVEL` | Уровень логирования (INFO, ERROR, WARN, DEBUG) | `[INFO]`, `[ERROR]` |
+| `SERVICE_NAME` | Название микросервиса, генерирующего лог | `order-service`, `payment-service` |
+| `MESSAGE` | Описание события или ошибки | `Order creation started` |
+| `REQUEST_ID` | Уникальный идентификатор запроса для корреляции | `req_abc123`, `req_xyz789` |
+
+### Примеры корректных логов
+
+```
+2024-02-26T14:30:25.120Z [INFO] order-service: Order creation started, request_id=req_abc123
+2024-02-26T14:30:26.450Z [INFO] payment-service: Processing payment of $99.99, request_id=req_abc123
+2024-02-26T14:30:27.678Z [ERROR] payment-service: Payment declined: insufficient funds, request_id=req_abc123
+2024-02-26T14:35:10.200Z [WARN] notification-service: Retry attempt 1 of 3, request_id=req_xyz789
+```
+
+### Требования к формату
+
+✅ **Обязательные поля:**
+- `TIMESTAMP` в формате ISO 8601 (с буквой `Z` для UTC)
+- `LEVEL` в квадратных скобках
+- `SERVICE_NAME` перед двоеточием
+- `request_id` в конце строки (для корреляции событий)
+
+⚠️ **Важно:**
+- Все логи для одного запроса должны иметь **один и тот же `request_id`**
+- `request_id` должен присутствовать во всех записях логов
+- Формат временной метки должен быть согласован во всех сервисах
+
+---
+
+**Версия:** 1.0.0  
+**Обновлено:** 2026-02-24

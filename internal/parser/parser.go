@@ -10,7 +10,7 @@ import (
 var mainRegex = regexp.MustCompile(`(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) \[(\w+)\] (\S+):\s(.+)`)
 var requestRegex = regexp.MustCompile(`request_id=([a-zA-Z0-9_]+)`)
 var userRegex = regexp.MustCompile(`user_id=([a-zA-Z0-9_]+)`)
-var msgRegex = regexp.MustCompile(`(.+?),`)
+var msgRegex = regexp.MustCompile(`(.+?),\s[a-z_]+=`)
 
 type LogEntry struct {
 	UserID    string
