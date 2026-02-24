@@ -25,17 +25,25 @@ func main() {
 	paths, err := scanner.ScanLogDirectory(dir)
 	if err != nil {
 		slog.Error("failed to scan directory", "error", err)
+		return
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	logs, err := utils.ProcessFilesConcurrently(ctx, paths, 5)
+	logs, failedPaths, err := utils.ProcessFilesConcurrently(ctx, paths, 5)
 	if err == context.Canceled {
 		slog.Warn("shutdown signal received, saving partial results...")
 	} else if err != nil {
 		slog.Error("processing files error", "error", err)
 		return
+	}
+
+	if len(failedPaths) > 0 {
+
+		for _, failPth := range failedPaths {
+			slog.Error("failed to process log file", "path", failPth)
+		}
 	}
 
 	correlatedReqs := processor.CorrelateRequests(logs)

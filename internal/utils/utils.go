@@ -8,6 +8,12 @@ import (
 	"sync"
 )
 
+type FileResult struct {
+	Entries []parser.LogEntry
+	Err     error
+	Path    string
+}
+
 func ProcessMultipleFiles(filePaths []string) ([]parser.LogEntry, error) {
 	capacity := len(filePaths) * scanner.DefaultLogCapacity
 
@@ -24,9 +30,9 @@ func ProcessMultipleFiles(filePaths []string) ([]parser.LogEntry, error) {
 	return res, nil
 }
 
-func ProcessFilesConcurrently(ctx context.Context, filePaths []string, numWorkers int) ([]parser.LogEntry, error) {
+func ProcessFilesConcurrently(ctx context.Context, filePaths []string, numWorkers int) (logEntries []parser.LogEntry, failedPaths []string, err error) {
 	jobs := make(chan string, len(filePaths))
-	results := make(chan []parser.LogEntry)
+	results := make(chan FileResult)
 	wg := &sync.WaitGroup{}
 
 loop:
@@ -49,16 +55,17 @@ loop:
 		close(results)
 	}()
 
-	var res []parser.LogEntry
-
 	for log := range results {
-		res = append(res, log...)
+		if log.Err != nil {
+			failedPaths = append(failedPaths, log.Path)
+		}
+		logEntries = append(logEntries, log.Entries...)
 	}
 
-	return res, ctx.Err()
+	return logEntries, failedPaths, ctx.Err()
 }
 
-func fileWorker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan string, results chan<- []parser.LogEntry) {
+func fileWorker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan string, results chan<- FileResult) {
 	defer wg.Done()
 	for {
 		select {
@@ -70,13 +77,15 @@ func fileWorker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan string, res
 			}
 			logs, err := scanner.ReadLogFile(pth)
 			if err != nil {
+				results <- FileResult{Err: err, Path: pth}
 				slog.Error("failed to read log file", "error", err, "path", pth)
 				continue
 			}
+
 			select {
 			case <-ctx.Done():
 				return
-			case results <- logs:
+			case results <- FileResult{Entries: logs, Path: pth}:
 			}
 
 		}
