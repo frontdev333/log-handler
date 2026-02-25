@@ -3,7 +3,6 @@ package processor
 import (
 	"log-handler/internal/parser"
 	"sort"
-	"strings"
 )
 
 const (
@@ -32,7 +31,7 @@ func DetectFailedRequests(correlatedRequests map[string][]parser.LogEntry) []str
 	for reqId, v := range correlatedRequests {
 		for _, log := range v {
 			level := log.Level
-			if strings.Contains(level, errLevel) || strings.Contains(level, warnLevel) {
+			if level == errLevel || level == warnLevel {
 				res = append(res, reqId)
 				break
 			}
